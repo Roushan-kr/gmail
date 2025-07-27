@@ -6,6 +6,8 @@ import { emptyProfilePic } from '../assets/Asset.js';
 import { trashEmail, sendEmail } from '../api/gmailApi.js';
 import { saveResumeData, getResumeData, getResumeHistory, exportResumeData } from '../utils/resumeStorage.js';
 import { saveAIContext, buildContextualPrompt } from '../utils/aiContext.js';
+import { resumeTemplates } from '../utils/resumeTemplates.js';
+import { cleanAIResponse } from '../utils/markdownSanitizer.js';
 
 // Move styled components outside the component to prevent re-creation
 const IconWrapper = styled(Box)({
@@ -136,6 +138,7 @@ const ViewEmails = ({ openDrawer }) => {
     email: '',
     phone: '',
     address: '',
+    summary: '',
     education: '',
     skills: '',
     experience: '',
@@ -144,6 +147,7 @@ const ViewEmails = ({ openDrawer }) => {
   });
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [generatingResume, setGeneratingResume] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState('modern');
   
   // Add refs for text fields
   const replyBodyRef = useRef(null);
@@ -330,10 +334,12 @@ const ViewEmails = ({ openDrawer }) => {
       const data = await response.json();
       
       if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-        const generatedReply = data.candidates[0].content.parts[0].text;
+        const rawReply = data.candidates[0].content.parts[0].text;
+        const cleanedReply = cleanAIResponse(rawReply);
+        
         setReplyData(prev => ({
           ...prev,
-          body: generatedReply
+          body: cleanedReply
         }));
 
         // Save AI interaction context
@@ -342,7 +348,7 @@ const ViewEmails = ({ openDrawer }) => {
           emailSubject: email.subject,
           emailFrom: email.from,
           userInstruction: aiInstruction,
-          generatedReply: generatedReply.substring(0, 200) + '...',
+          generatedReply: cleanedReply.substring(0, 200) + '...',
           hasResumeContext: !!currentResumeData
         });
 
@@ -415,10 +421,12 @@ const ViewEmails = ({ openDrawer }) => {
       const data = await response.json();
       
       if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-        const generatedReply = data.candidates[0].content.parts[0].text;
+        const rawReply = data.candidates[0].content.parts[0].text;
+        const cleanedReply = cleanAIResponse(rawReply);
+        
         setReplyData(prev => ({
           ...prev,
-          body: generatedReply
+          body: cleanedReply
         }));
 
         // Save AI interaction context
@@ -427,7 +435,7 @@ const ViewEmails = ({ openDrawer }) => {
           emailSubject: email.subject,
           emailFrom: email.from,
           userInstruction: 'Generate professional application reply',
-          generatedReply: generatedReply.substring(0, 200) + '...', // Save summary
+          generatedReply: cleanedReply.substring(0, 200) + '...', // Save summary
           resumeSnapshot: {
             name: resumeData.fullName,
             skills: resumeData.skills.substring(0, 100),
@@ -454,46 +462,12 @@ const ViewEmails = ({ openDrawer }) => {
   const generateResumePDF = async () => {
     setGeneratingResume(true);
     try {
-      // Import jsPDF dynamically
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
-      
-      // Set fonts and colors
-      doc.setFontSize(20);
-      doc.setTextColor(40, 40, 40);
-      doc.text(resumeData.fullName || 'Your Name', 20, 30);
-      
-      // Contact info
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`${resumeData.email} | ${resumeData.phone} | ${resumeData.address}`, 20, 40);
-      
-      let yPosition = 60;
-      
-      // Helper function to add sections
-      const addSection = (title, content) => {
-        if (content) {
-          doc.setFontSize(14);
-          doc.setTextColor(40, 40, 40);
-          doc.text(title, 20, yPosition);
-          yPosition += 10;
-          
-          doc.setFontSize(10);
-          doc.setTextColor(60, 60, 60);
-          const lines = doc.splitTextToSize(content, 170);
-          doc.text(lines, 20, yPosition);
-          yPosition += lines.length * 5 + 10;
-        }
-      };
-      
-      addSection('EDUCATION', resumeData.education);
-      addSection('SKILLS', resumeData.skills);
-      addSection('EXPERIENCE', resumeData.experience);
-      addSection('PROJECTS', resumeData.projects);
-      addSection('CERTIFICATIONS', resumeData.certifications);
+      const template = resumeTemplates[selectedTemplate];
+      const doc = await template.generator(resumeData);
       
       // Save the PDF
-      doc.save(`${resumeData.fullName.replace(/\s+/g, '_')}_Resume.pdf`);
+      const fileName = `${resumeData.fullName.replace(/\s+/g, '_')}_Resume_${template.name.replace(/\s+/g, '_')}.pdf`;
+      doc.save(fileName);
       
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -751,6 +725,41 @@ const ViewEmails = ({ openDrawer }) => {
                       sx={{ marginTop: 2 }}
                     />
                     
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Professional Summary"
+                      placeholder="e.g., Passionate Computer Science student with experience in web development..."
+                      value={resumeData.summary || ''}
+                      onChange={handleResumeChange('summary')}
+                      multiline
+                      rows={2}
+                      sx={{ marginTop: 2 }}
+                    />
+                    
+                    {/* Template Selection */}
+                    <Box sx={{ marginTop: 2 }}>
+                      <Typography variant="caption" color="textSecondary" gutterBottom>
+                        Choose Resume Template:
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, marginTop: 1 }}>
+                        {Object.entries(resumeTemplates).map(([key, template]) => (
+                          <Button
+                            key={key}
+                            size="small"
+                            variant={selectedTemplate === key ? 'contained' : 'outlined'}
+                            onClick={() => setSelectedTemplate(key)}
+                            sx={{ textTransform: 'none' }}
+                          >
+                            {template.name}
+                          </Button>
+                        ))}
+                      </Box>
+                      <Typography variant="caption" color="textSecondary" sx={{ marginTop: 1, display: 'block' }}>
+                        {resumeTemplates[selectedTemplate].description}
+                      </Typography>
+                    </Box>
+                    
                     <Box sx={{ marginTop: 3, display: 'flex', justifyContent: 'space-between', gap: 1 }}>
                       <Button
                         size="small"
@@ -759,7 +768,7 @@ const ViewEmails = ({ openDrawer }) => {
                         disabled={generatingResume || !resumeData.fullName}
                         variant="outlined"
                       >
-                        {generatingResume ? 'Generating PDF...' : 'Download Resume PDF'}
+                        {generatingResume ? 'Generating PDF...' : `Download ${resumeTemplates[selectedTemplate].name} PDF`}
                       </Button>
                       
                       <Button

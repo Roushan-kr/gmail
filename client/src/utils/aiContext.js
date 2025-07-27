@@ -80,11 +80,16 @@ Body: ${originalEmail.body}
 
 User Instruction: ${userInstruction}
 
-Based on the context and profile above, generate a professional email reply that:
-1. Maintains consistency with previous interactions
-2. Leverages the candidate's background appropriately
-3. Addresses the current email specifically
-4. Shows professional growth and learning from past interactions
+Generate a professional email reply in PLAIN TEXT format (no markdown, no formatting). The reply should:
+1. Be ready to send as-is in an email client
+2. Use proper email etiquette and formatting
+3. Be professional but conversational
+4. Include appropriate greetings and closings
+5. Maintain consistency with previous interactions
+6. Leverage the candidate's background appropriately
+7. Address the current email specifically
+
+Do not include any markdown formatting, headers, bold text, or special characters. Write as if typing directly in an email compose window.
 `;
 };
 
