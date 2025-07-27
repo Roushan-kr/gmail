@@ -353,7 +353,17 @@ const PrivacyPolicy = () => {
           <Typography variant="body2">
             <strong>Email:</strong> dev.roushncse@gmail.com<br/>
             <strong>Project:</strong> Gmail Clone - Educational Application<br/>
-            <strong>Data Controller:</strong> Local Browser Storage Only
+            <strong>Data Controller:</strong> Local Browser Storage Only<br/>
+            <strong>Terms of Service:</strong> 
+            <Typography 
+              component="span" 
+              variant="body2" 
+              color="primary" 
+              sx={{ cursor: 'pointer', textDecoration: 'underline', ml: 1 }}
+              onClick={() => window.open('/terms', '_blank')}
+            >
+              View Terms
+            </Typography>
           </Typography>
         </Box>
 
