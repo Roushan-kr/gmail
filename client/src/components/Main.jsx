@@ -14,11 +14,21 @@ const Main = () => {
   };
 
   return (
-    <Box>
+    <Box sx={{ 
+      minHeight: '100vh', 
+      backgroundColor: '#f8f9fa',
+      fontFamily: 'Google Sans, sans-serif'
+    }}>
       <Header toggleDrawer={toggleDrawer} />
       <Box style={{ display: 'flex' }}>
         <SideBar openDrawer={openDrawer} />
-        <Box style={{ flex: 1 }}>
+        <Box 
+          style={{ 
+            flex: 1,
+            transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
+          className="fade-in"
+        >
           <Routes>
             <Route path="/" element={<Email openDrawer={openDrawer} />} />
             <Route path="/emails/:type" element={<Email openDrawer={openDrawer} />} />

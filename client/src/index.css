@@ -1,13 +1,285 @@
-body {
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+
+/* Global reset and base styles */
+* {
+  box-sizing: border-box;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  padding: 0;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #202124;
+  background-color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Typography enhancements */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Google Sans', sans-serif;
+  font-weight: 500;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+  color: #202124;
+}
+
+p {
+  margin-bottom: 1rem;
+  color: #5f6368;
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #dadce0;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #bdc1c6;
+}
+
+::-webkit-scrollbar-corner {
+  background: #f8f9fa;
+}
+
+/* Material-UI fixes */
+.MuiBackdrop-root {
+  display: none !important;
+}
+
+.MuiDrawer-paper {
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3) !important;
+}
+
+/* Button enhancements */
+.MuiButton-root {
+  font-family: 'Google Sans', sans-serif !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.MuiButton-contained {
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3) !important;
+}
+
+.MuiButton-contained:hover {
+  box-shadow: 0 2px 8px rgba(60, 64, 67, 0.3) !important;
+  transform: translateY(-1px);
+}
+
+/* TextField enhancements */
+.MuiTextField-root {
+  font-family: 'Google Sans', sans-serif !important;
+}
+
+.MuiInputBase-root {
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.MuiOutlinedInput-root {
+  border-radius: 8px !important;
+}
+
+.MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #1a73e8 !important;
+}
+
+/* Loading animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Animation classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.slide-in-left {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
+/* Gmail-like styling */
+.gmail-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e8eaed;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
+}
+
+.gmail-sidebar {
+  background: #ffffff;
+  border-right: 1px solid #e8eaed;
+}
+
+.gmail-content {
+  background: #ffffff;
+}
+
+/* Email list styling */
+.email-item {
+  border-bottom: 1px solid #e8eaed;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.email-item:hover {
+  background-color: #f8f9fa;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
+}
+
+.email-item.unread {
+  background-color: #ffffff;
+  font-weight: 500;
+}
+
+.email-item.read {
+  background-color: #fafafa;
+  opacity: 0.8;
+}
+
+/* Focus styles */
+.MuiButton-root:focus,
+.MuiIconButton-root:focus {
+  outline: 2px solid #1a73e8;
+  outline-offset: 2px;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 1200px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+  
+  .MuiDrawer-paper {
+    width: 280px !important;
+  }
+  
+  body {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .MuiDrawer-paper {
+    width: 100vw !important;
+  }
+  
+  html {
+    font-size: 13px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #202124;
+    --bg-secondary: #303134;
+    --text-primary: #e8eaed;
+    --text-secondary: #9aa0a6;
+    --border-color: #5f6368;
+  }
+}
+
+/* Print styles */
+@media print {
+  .MuiDrawer-paper,
+  .gmail-header,
+  .MuiButton-root {
+    display: none !important;
+  }
+  
+  body {
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .email-item:hover {
+    background-color: #000000;
+    color: #ffffff;
+  }
+  
+  .MuiButton-outlined {
+    border-width: 2px !important;
+  }
 }

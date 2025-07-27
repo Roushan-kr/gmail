@@ -14,11 +14,17 @@ const SideBar = ({ openDrawer }) => {
       variant="persistent"
       sx={{
         '& .MuiDrawer-paper': {
-          position: 'relative',
+          position: 'fixed',
+          top: '64px',
           width: openDrawer ? 250 : 0,
           height: 'calc(100vh - 64px)',
-          borderRight: '1px solid #e0e0e0',
-          transition: 'width 0.2s ease-in-out',
+          borderRight: '1px solid #e8eaed',
+          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
+          zIndex: 1200,
+          backgroundColor: '#ffffff',
+          fontFamily: 'Google Sans, sans-serif',
+          boxShadow: '1px 0 3px rgba(60, 64, 67, 0.08)',
         },
       }}
     >

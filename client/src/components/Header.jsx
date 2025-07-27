@@ -38,6 +38,29 @@ const OptionsWrapper = styled(Box)`
         margin-left: 20px;
     }
 `
+const HeaderContainer = styled(AppBar)({
+  zIndex: 1201,
+  backgroundColor: '#ffffff',
+  color: '#5f6368',
+  boxShadow: '0 1px 3px rgba(60, 64, 67, 0.3)',
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  borderBottom: '1px solid #e8eaed',
+  fontFamily: 'Google Sans, sans-serif'
+});
+
+const LogoContainer = styled(Box)({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '12px',
+  fontFamily: 'Google Sans, sans-serif',
+  fontWeight: 500,
+  fontSize: '22px',
+  color: '#5f6368',
+  letterSpacing: '-0.5px'
+});
 
 
 const Header = ({toggleDrawer}) => {
