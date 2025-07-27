@@ -345,21 +345,54 @@ export const getEmails = async (query = '', maxResults = 50) => {
   }
 };
 
-export const sendEmail = async (to, subject, body) => {
+export const sendEmail = async (to, subject, body, attachments = []) => {
   try {
-    if (!isSignedIn()) {
-      throw new Error('User not signed in');
+    if (!gapi || !gapi.client || !gapi.client.gmail) {
+      throw new Error('Gmail API not available');
     }
 
-    const email = [
-      'Content-Type: text/plain; charset="UTF-8"\r\n',
-      'MIME-Version: 1.0\r\n',
-      `To: ${to}\r\n`,
-      `Subject: ${subject}\r\n\r\n`,
+    // Create email message
+    let email = [
+      'Content-Type: text/plain; charset="UTF-8"\n',
+      'MIME-Version: 1.0\n',
+      `To: ${to}\n`,
+      `Subject: ${subject}\n\n`,
       body,
     ].join('');
 
-    const base64EncodedEmail = btoa(unescape(encodeURIComponent(email)))
+    // If there are attachments, create multipart message
+    if (attachments && attachments.length > 0) {
+      const boundary = '----=_NextPart_' + Date.now();
+
+      email = [
+        `Content-Type: multipart/mixed; boundary="${boundary}"\n`,
+        'MIME-Version: 1.0\n',
+        `To: ${to}\n`,
+        `Subject: ${subject}\n\n`,
+        `--${boundary}\n`,
+        'Content-Type: text/plain; charset="UTF-8"\n\n',
+        body,
+        '\n',
+      ].join('');
+
+      // Add each attachment
+      for (const attachment of attachments) {
+        const fileData = await convertFileToBase64(attachment.file);
+        email += [
+          `--${boundary}\n`,
+          `Content-Type: ${attachment.type}; name="${attachment.name}"\n`,
+          'Content-Transfer-Encoding: base64\n',
+          `Content-Disposition: attachment; filename="${attachment.name}"\n\n`,
+          fileData,
+          '\n',
+        ].join('');
+      }
+
+      email += `--${boundary}--`;
+    }
+
+    // Encode the email
+    const encodedEmail = btoa(unescape(encodeURIComponent(email)))
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
@@ -367,15 +400,29 @@ export const sendEmail = async (to, subject, body) => {
     const response = await gapi.client.gmail.users.messages.send({
       userId: 'me',
       resource: {
-        raw: base64EncodedEmail,
+        raw: encodedEmail,
       },
     });
 
+    console.log('Email sent successfully:', response);
     return response;
   } catch (error) {
     console.error('Error sending email:', error);
     throw error;
   }
+};
+
+// Helper function to convert file to base64
+const convertFileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1]; // Remove data:type;base64, prefix
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 };
 
 export const starEmail = async (messageId, star = true) => {

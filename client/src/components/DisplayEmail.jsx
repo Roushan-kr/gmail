@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { ListItem, Checkbox, Typography, Box, styled, IconButton } from "@mui/material"
-import { StarBorder, Star, Reply } from '@mui/icons-material';
+import { StarBorder, Star, Reply, AttachFile } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import {routes} from '../routes/route.js'
 import { starEmail } from '../api/gmailApi';
@@ -124,6 +124,9 @@ const DisplayEmail = ({ email, selectedEmails, setSelectedEmails, onEmailUpdate 
         }
     });
 
+    const hasAttachments = email.payload?.parts?.some(part => 
+        part.filename && part.filename.length > 0
+    ) || false;
         
     
   return (
@@ -163,9 +166,10 @@ const DisplayEmail = ({ email, selectedEmails, setSelectedEmails, onEmailUpdate 
                         {truncatedBody}
                     </span>
                 </Typography>
-                <DateStyled>
+                <Box sx={{ fontSize: 12, color: '#5f6368', display: 'flex', alignItems: 'center', gap: 1 }}>
                     {formattedDate}
-                </DateStyled>
+                    {hasAttachments && <AttachFile fontSize="small" />}
+                </Box>
       </Box>
 
       <QuickActions>

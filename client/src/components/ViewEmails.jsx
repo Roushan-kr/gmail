@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Box, Typography, styled, Button, TextField, Collapse, IconButton, Chip, CircularProgress } from '@mui/material';
 import { useLocation } from "react-router-dom";
-import { ArrowBack, Delete, Reply, Send, Close, AutoAwesome, Refresh, PersonAdd, PictureAsPdf } from '@mui/icons-material';
+import { ArrowBack, Delete, Reply, Send, Close, AutoAwesome, Refresh, PersonAdd, PictureAsPdf, AttachFile, Delete as DeleteIcon } from '@mui/icons-material';
 import { emptyProfilePic } from '../assets/Asset.js';
 import { trashEmail, sendEmail } from '../api/gmailApi.js';
 import { saveResumeData, getResumeData, getResumeHistory, exportResumeData } from '../utils/resumeStorage.js';
@@ -148,6 +148,8 @@ const ViewEmails = ({ openDrawer }) => {
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [generatingResume, setGeneratingResume] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState('modern');
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
   
   // Add refs for text fields
   const replyBodyRef = useRef(null);
@@ -243,12 +245,49 @@ const ViewEmails = ({ openDrawer }) => {
     }
   }
   
+  const handleFileAttachment = (event) => {
+    const files = Array.from(event.target.files);
+    const newAttachments = files.map(file => ({
+      id: Date.now() + Math.random(),
+      file,
+      name: file.name,
+      size: file.size,
+      type: file.type
+    }));
+    
+    setAttachments(prev => [...prev, ...newAttachments]);
+    event.target.value = ''; // Reset input
+  };
+
+  const removeAttachment = (attachmentId) => {
+    setAttachments(prev => prev.filter(att => att.id !== attachmentId));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const sendReply = async () => {
     try {
       setSending(true);
-      await sendEmail(replyData.to, replyData.subject, replyData.body);
+      
+      // Create email data with attachments
+      const emailData = {
+        to: replyData.to,
+        subject: replyData.subject,
+        body: replyData.body,
+        attachments: attachments
+      };
+      
+      await sendEmail(emailData.to, emailData.subject, emailData.body, emailData.attachments);
+      
       setShowReply(false);
       setReplyData({ to: '', subject: '', body: '' });
+      setAttachments([]);
       alert('Reply sent successfully!');
     } catch (error) {
       console.error('Error sending reply:', error);
@@ -261,6 +300,7 @@ const ViewEmails = ({ openDrawer }) => {
   const cancelReply = () => {
     setShowReply(false);
     setReplyData({ to: '', subject: '', body: '' });
+    setAttachments([]);
   };
   
   const formatEmailContent = (body) => {
@@ -880,6 +920,53 @@ const ViewEmails = ({ openDrawer }) => {
                       autoComplete: 'off'
                     }}
                   />
+                  
+                  {/* Attachments Section */}
+                  {attachments.length > 0 && (
+                    <Box sx={{ 
+                      border: '1px solid #e0e0e0', 
+                      borderRadius: '8px', 
+                      padding: '12px', 
+                      marginBottom: '8px',
+                      backgroundColor: '#f8f9fa'
+                    }}>
+                      <Typography variant="subtitle2" gutterBottom color="textSecondary">
+                        Attachments ({attachments.length})
+                      </Typography>
+                      {attachments.map((attachment) => (
+                        <Box key={attachment.id} sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          padding: '8px',
+                          backgroundColor: 'white',
+                          borderRadius: '4px',
+                          marginBottom: '4px',
+                          border: '1px solid #e0e0e0'
+                        }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <AttachFile fontSize="small" color="action" />
+                            <Box>
+                              <Typography variant="body2" fontWeight="medium">
+                                {attachment.name}
+                              </Typography>
+                              <Typography variant="caption" color="textSecondary">
+                                {formatFileSize(attachment.size)} • {attachment.type}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          <IconButton
+                            size="small"
+                            onClick={() => removeAttachment(attachment.id)}
+                            color="error"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+
                   <TextField
                     fullWidth
                     multiline
@@ -902,8 +989,31 @@ const ViewEmails = ({ openDrawer }) => {
                       }
                     }}
                   />
+
+                  {/* File Upload and Action Buttons */}
                   <Box style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {/* File Upload Button */}
+                      <input
+                        type="file"
+                        multiple
+                        onChange={handleFileAttachment}
+                        style={{ display: 'none' }}
+                        id="file-upload-input"
+                        accept="*/*"
+                      />
+                      <label htmlFor="file-upload-input">
+                        <Button
+                          component="span"
+                          size="small"
+                          startIcon={<AttachFile />}
+                          variant="outlined"
+                          disabled={sending}
+                        >
+                          Attach Files
+                        </Button>
+                      </label>
+
                       {replyData.body && showAIAssist && (
                         <Button
                           size="small"
@@ -914,7 +1024,9 @@ const ViewEmails = ({ openDrawer }) => {
                           Regenerate
                         </Button>
                       )}
-                    </Box>
+                    </Box
+                    >
+                    
                     <Box style={{ display: 'flex', gap: '8px' }}>
                       <Button
                         variant="outlined"
