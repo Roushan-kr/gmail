@@ -231,15 +231,22 @@ const GoogleAuth = ({ onAuthSuccess, children }) => {
           Your data is processed locally and not stored on our servers.
         </Typography>
 
-        <Box sx={{ marginTop: 2 }}>
+        <Box sx={{ marginTop: 2, display: 'flex', gap: 2, justifyContent: 'center' }}>
           <Typography 
             variant="caption" 
             color="primary" 
-            align="center"
-            onClick={() => window.open('/privacy', '_blank')}
             sx={{ cursor: 'pointer', textDecoration: 'underline' }}
+            onClick={() => window.open('/privacy', '_blank')}
           >
             Privacy Policy
+          </Typography>
+          <Typography 
+            variant="caption" 
+            color="primary" 
+            sx={{ cursor: 'pointer', textDecoration: 'underline' }}
+            onClick={() => window.open('/terms', '_blank')}
+          >
+            Terms of Service
           </Typography>
         </Box>
       </AuthContainer>
