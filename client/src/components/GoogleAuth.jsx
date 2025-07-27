@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Button, Typography, styled, CircularProgress } from '@mui/material';
-import { initializeGapi, signIn, signOut, isSignedIn } from '../api/gmailApi';
+import { initializeGapi, signIn, signOut, isSignedIn, startTokenRefresh } from '../api/gmailApi';
 import { validateEnvironment, getSetupInstructions } from '../utils/envCheck.js';
 import SetupGuide from './SetupGuide.jsx';
 
@@ -31,6 +31,7 @@ const GoogleAuth = ({ onAuthSuccess, children }) => {
   const [error, setError] = useState('');
   const [signingIn, setSigningIn] = useState(false);
   const [showSetupGuide, setShowSetupGuide] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -86,13 +87,15 @@ const GoogleAuth = ({ onAuthSuccess, children }) => {
         console.log('Google APIs loaded, initializing...');
         await initializeGapi();
         
-        // Wait a bit for everything to be ready
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Start token refresh mechanism
+        startTokenRefresh();
         
+        // Check authentication status
         const authenticated = isSignedIn();
         setIsAuthenticated(authenticated);
         
         if (authenticated) {
+          console.log('User already authenticated');
           onAuthSuccess();
         }
         
@@ -102,6 +105,7 @@ const GoogleAuth = ({ onAuthSuccess, children }) => {
         setError(error.message);
       } finally {
         setIsLoading(false);
+        setCheckingAuth(false);
       }
     };
 
@@ -145,12 +149,14 @@ const GoogleAuth = ({ onAuthSuccess, children }) => {
     try {
       signOut();
       setIsAuthenticated(false);
+      // Clear any app state
+      window.location.reload();
     } catch (error) {
       console.error('Sign out failed:', error);
     }
   };
 
-  if (isLoading) {
+  if (isLoading || checkingAuth) {
     return (
       <AuthContainer>
         <CircularProgress />

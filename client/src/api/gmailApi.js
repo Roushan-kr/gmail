@@ -5,9 +5,49 @@ const DISCOVERY_DOC =
 const SCOPES =
   'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly';
 
+const TOKEN_STORAGE_KEY = 'gmail_clone_auth_token';
+const TOKEN_EXPIRY_KEY = 'gmail_clone_token_expiry';
+
 let gapi,
   tokenClient,
   isInitialized = false;
+
+// Token management functions
+const saveToken = (token) => {
+  try {
+    localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(token));
+    // Set expiry time (tokens usually last 1 hour)
+    const expiryTime = Date.now() + 3600 * 1000; // 1 hour from now
+    localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
+  } catch (error) {
+    console.error('Error saving token:', error);
+  }
+};
+
+const getStoredToken = () => {
+  try {
+    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+    const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+
+    if (token && expiry) {
+      const expiryTime = parseInt(expiry);
+      if (Date.now() < expiryTime) {
+        return JSON.parse(token);
+      } else {
+        // Token expired, remove it
+        clearStoredToken();
+      }
+    }
+  } catch (error) {
+    console.error('Error retrieving token:', error);
+  }
+  return null;
+};
+
+const clearStoredToken = () => {
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  localStorage.removeItem(TOKEN_EXPIRY_KEY);
+};
 
 export const initializeGapi = async () => {
   return new Promise((resolve, reject) => {
@@ -57,7 +97,7 @@ export const initializeGapi = async () => {
     }
 
     gapi = window.gapi;
-    console.log('Initializing Google API with credentials...');
+    console.log('Initializing Google API...');
 
     gapi.load('client', async () => {
       try {
@@ -67,6 +107,13 @@ export const initializeGapi = async () => {
         });
 
         console.log('Google API Client initialized successfully');
+
+        // Check for stored token and restore session
+        const storedToken = getStoredToken();
+        if (storedToken) {
+          gapi.client.setToken(storedToken);
+          console.log('Restored authentication from stored token');
+        }
 
         // Wait for Google Identity Services
         let attempts = 0;
@@ -116,42 +163,10 @@ export const initializeGapi = async () => {
         resolve();
       } catch (error) {
         console.error('Failed to initialize GAPI:', error);
-
-        if (
-          error.message.includes('400') ||
-          error.message.includes('invalid')
-        ) {
-          reject(
-            new Error(
-              'Invalid API key. Please check your Google API key in the .env file.'
-            )
-          );
-        } else if (error.message.includes('OAuth client was not found')) {
-          reject(
-            new Error(
-              `OAuth Client ID "${CLIENT_ID}" was not found. Please check your Google Cloud Console setup.`
-            )
-          );
-        } else {
-          reject(error);
-        }
+        reject(error);
       }
     });
   });
-};
-
-export const isSignedIn = () => {
-  try {
-    if (!gapi || !gapi.client || typeof gapi.client.getToken !== 'function') {
-      return false;
-    }
-
-    const token = gapi.client.getToken();
-    return token !== null && token.access_token && !isTokenExpired(token);
-  } catch (error) {
-    console.error('Error checking sign-in status:', error);
-    return false;
-  }
 };
 
 export const signIn = () => {
@@ -163,7 +178,7 @@ export const signIn = () => {
       return;
     }
 
-    if (!isInitialized || !gapi || !gapi.client) {
+    if (!isInitialized) {
       reject(new Error('Google API not initialized. Please refresh the page.'));
       return;
     }
@@ -184,60 +199,116 @@ export const signIn = () => {
       }
 
       try {
-        // Ensure gapi.client is available before setting token
-        if (!gapi.client || typeof gapi.client.setToken !== 'function') {
-          throw new Error('Google API client not properly initialized');
-        }
+        // Create token object with expiry
+        const tokenData = {
+          access_token: resp.access_token,
+          expires_at: Math.floor(Date.now() / 1000) + (resp.expires_in || 3600),
+        };
 
         // Set the access token
-        gapi.client.setToken({ access_token: resp.access_token });
+        gapi.client.setToken(tokenData);
 
-        // Test the connection by making a simple API call
+        // Save token for persistence
+        saveToken(tokenData);
+
+        // Test the connection
         await gapi.client.gmail.users.getProfile({ userId: 'me' });
 
-        console.log('Sign-in successful');
+        console.log('Sign-in successful and token saved');
         resolve(resp);
       } catch (error) {
         console.error('Error setting token or testing connection:', error);
+        clearStoredToken();
         reject(new Error('Failed to complete sign-in process'));
       }
     };
 
-    // Check if user is already signed in
-    try {
-      const existingToken = gapi.client.getToken();
-      if (existingToken !== null && existingToken.access_token) {
-        tokenClient.requestAccessToken({ prompt: '' });
-      } else {
-        tokenClient.requestAccessToken({ prompt: 'consent' });
-      }
-    } catch (error) {
-      console.error('Error checking existing token:', error);
+    // Check if user is already signed in with valid token
+    const storedToken = getStoredToken();
+    if (storedToken && isTokenValid(storedToken)) {
+      console.log('Using existing valid token');
+      resolve({ access_token: storedToken.access_token });
+      return;
+    }
+
+    // Request new token
+    if (storedToken) {
+      // Try refresh first
+      tokenClient.requestAccessToken({ prompt: '' });
+    } else {
+      // First time login
       tokenClient.requestAccessToken({ prompt: 'consent' });
     }
   });
 };
 
+export const isSignedIn = () => {
+  if (!gapi || !gapi.client) {
+    return false;
+  }
+
+  // Check stored token first
+  const storedToken = getStoredToken();
+  if (storedToken && isTokenValid(storedToken)) {
+    // Ensure gapi has the token
+    const currentToken = gapi.client.getToken();
+    if (!currentToken || !currentToken.access_token) {
+      gapi.client.setToken(storedToken);
+    }
+    return true;
+  }
+
+  // Check current gapi token
+  const token = gapi.client.getToken();
+  return token !== null && token.access_token && isTokenValid(token);
+};
+
+const isTokenValid = (token) => {
+  if (!token || !token.expires_at) {
+    return false;
+  }
+  // Add 5 minute buffer before expiry
+  const bufferTime = 5 * 60; // 5 minutes in seconds
+  return Date.now() / 1000 < token.expires_at - bufferTime;
+};
+
 export const signOut = () => {
   try {
-    if (gapi && gapi.client && typeof gapi.client.getToken === 'function') {
+    if (gapi && gapi.client) {
       const token = gapi.client.getToken();
-      if (token !== null) {
+      if (token !== null && token.access_token) {
         window.google.accounts.oauth2.revoke(token.access_token);
         gapi.client.setToken('');
       }
     }
+    clearStoredToken();
+    console.log('Sign out successful');
   } catch (error) {
     console.error('Error during sign out:', error);
+    clearStoredToken(); // Clear even if revoke fails
   }
 };
 
-// Helper function to check if token is expired
-const isTokenExpired = (token) => {
-  if (!token || !token.expires_at) {
-    return false;
+// Auto-refresh token before expiry
+const autoRefreshToken = () => {
+  const storedToken = getStoredToken();
+  if (storedToken && tokenClient) {
+    const timeUntilExpiry = storedToken.expires_at * 1000 - Date.now();
+    const refreshTime = Math.max(timeUntilExpiry - 10 * 60 * 1000, 60000); // Refresh 10 minutes before expiry, but at least in 1 minute
+
+    setTimeout(() => {
+      if (isSignedIn()) {
+        tokenClient.requestAccessToken({ prompt: '' });
+      }
+    }, refreshTime);
   }
-  return Date.now() >= token.expires_at * 1000;
+};
+
+// Start auto-refresh when initialized
+export const startTokenRefresh = () => {
+  autoRefreshToken();
+  // Set up periodic refresh check every 30 minutes
+  setInterval(autoRefreshToken, 30 * 60 * 1000);
 };
 
 export const getEmails = async (query = '', maxResults = 50) => {
