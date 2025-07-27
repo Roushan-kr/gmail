@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="google-signin-client_id"
+      content="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+    />
+    <meta
+      name="description"
+      content="Gmail Clone with Google API Integration"
+    />
+    <title>Gmail</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+
+    <!-- Initialize loading states -->
+    <script>
+      window.gapiLoaded = false;
+      window.gisLoaded = false;
+      window.scriptsError = false;
+    </script>
+
+    <!-- Load Google API script first -->
+    <script
+      src="https://apis.google.com/js/api.js"
+      onload="console.log('Google API script loaded'); window.gapiLoaded = true;"
+      onerror="window.scriptsError = true; console.error('Failed to load Google API script')"
+    ></script>
+
+    <!-- Load Google Identity Services -->
+    <script
+      src="https://accounts.google.com/gsi/client"
+      async
+      defer
+      onload="console.log('Google Identity Services script loaded'); window.gisLoaded = true;"
+      onerror="window.scriptsError = true; console.error('Failed to load Google Identity Services script')"
+    ></script>
+
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
