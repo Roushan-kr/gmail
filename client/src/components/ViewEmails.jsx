@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Box, Typography, styled, Button, TextField, Collapse, IconButton, Chip, CircularProgress } from '@mui/material';
 import { useLocation } from "react-router-dom";
-import { ArrowBack, Delete, Reply, Send, Close, AutoAwesome, Refresh } from '@mui/icons-material';
+import { ArrowBack, Delete, Reply, Send, Close, AutoAwesome, Refresh, PersonAdd, PictureAsPdf } from '@mui/icons-material';
 import { emptyProfilePic } from '../assets/Asset.js';
 import { trashEmail, sendEmail } from '../api/gmailApi.js';
+import { saveResumeData, getResumeData, getResumeHistory, exportResumeData } from '../utils/resumeStorage.js';
+import { saveAIContext, buildContextualPrompt } from '../utils/aiContext.js';
 
 // Move styled components outside the component to prevent re-creation
 const IconWrapper = styled(Box)({
@@ -108,6 +110,14 @@ const EmailContent = styled(Box)({
   overflowX: 'auto'
 });
 
+const ResumeSection = styled(Box)({
+  marginTop: '16px',
+  padding: '16px',
+  backgroundColor: '#f0f8f0',
+  border: '1px solid #c8e6c9',
+  borderRadius: '8px'
+});
+
 const ViewEmails = ({ openDrawer }) => {
   const [showReply, setShowReply] = useState(false);
   const [replyData, setReplyData] = useState({
@@ -120,6 +130,20 @@ const ViewEmails = ({ openDrawer }) => {
   const [aiInstruction, setAiInstruction] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [showResumeAssist, setShowResumeAssist] = useState(false);
+  const [resumeData, setResumeData] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    address: '',
+    education: '',
+    skills: '',
+    experience: '',
+    projects: '',
+    certifications: ''
+  });
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [generatingResume, setGeneratingResume] = useState(false);
   
   // Add refs for text fields
   const replyBodyRef = useRef(null);
@@ -128,6 +152,25 @@ const ViewEmails = ({ openDrawer }) => {
 
   const { state } = useLocation();
   const { email, autoReply = false } = state ||{};
+
+  // Load resume data on component mount
+  useEffect(() => {
+    const savedResumeData = getResumeData();
+    if (savedResumeData) {
+      setResumeData(savedResumeData);
+    }
+  }, []);
+
+  // Auto-save resume data when it changes
+  useEffect(() => {
+    if (autoSaveEnabled && resumeData.fullName) {
+      const timeoutId = setTimeout(() => {
+        saveResumeData(resumeData);
+      }, 1000); // Debounce save for 1 second
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [resumeData, autoSaveEnabled]);
 
   // Auto-open reply if coming from quick reply
   useEffect(() => {
@@ -178,6 +221,13 @@ const ViewEmails = ({ openDrawer }) => {
 
   const handleAiInstructionChange = useCallback((event) => {
     setAiInstruction(event.target.value);
+  }, []);
+
+  const handleResumeChange = useCallback((field) => (event) => {
+    setResumeData(prev => ({
+      ...prev,
+      [field]: event.target.value
+    }));
   }, []);
 
   const deleteEmails = async () => {
@@ -260,16 +310,8 @@ const ViewEmails = ({ openDrawer }) => {
 
     setAiGenerating(true);
     try {
-      const prompt = `
-        Original Email:
-        From: ${email.from}
-        Subject: ${email.subject}
-        Body: ${email.body}
-
-        User Instruction: ${aiInstruction}
-
-        Please generate a professional email reply based on the original email and user instruction. Keep it concise and appropriate.
-      `;
+      const currentResumeData = getResumeData();
+      const contextualPrompt = buildContextualPrompt(email, aiInstruction, currentResumeData);
 
       const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + import.meta.env.VITE_GEMINI_API_KEY, {
         method: 'POST',
@@ -279,7 +321,7 @@ const ViewEmails = ({ openDrawer }) => {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: prompt
+              text: contextualPrompt
             }]
           }]
         })
@@ -293,7 +335,17 @@ const ViewEmails = ({ openDrawer }) => {
           ...prev,
           body: generatedReply
         }));
-        // Focus the text area after AI generation
+
+        // Save AI interaction context
+        saveAIContext({
+          type: 'ai_assisted_reply',
+          emailSubject: email.subject,
+          emailFrom: email.from,
+          userInstruction: aiInstruction,
+          generatedReply: generatedReply.substring(0, 200) + '...',
+          hasResumeContext: !!currentResumeData
+        });
+
         setTimeout(() => {
           if (replyBodyRef.current) {
             replyBodyRef.current.focus();
@@ -334,6 +386,149 @@ const ViewEmails = ({ openDrawer }) => {
     }
     setShowAIAssist(!showAIAssist);
   };
+
+  const generateResumeBasedReply = async () => {
+    if (!resumeData.fullName || !resumeData.email) {
+      alert('Please fill in at least your name and email');
+      return;
+    }
+
+    setAiGenerating(true);
+    try {
+      // Build contextual prompt using AI context and resume data
+      const contextualPrompt = buildContextualPrompt(email, 'Generate a professional application reply', resumeData);
+
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + import.meta.env.VITE_GEMINI_API_KEY, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: contextualPrompt
+            }]
+          }]
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+        const generatedReply = data.candidates[0].content.parts[0].text;
+        setReplyData(prev => ({
+          ...prev,
+          body: generatedReply
+        }));
+
+        // Save AI interaction context
+        saveAIContext({
+          type: 'resume_based_reply',
+          emailSubject: email.subject,
+          emailFrom: email.from,
+          userInstruction: 'Generate professional application reply',
+          generatedReply: generatedReply.substring(0, 200) + '...', // Save summary
+          resumeSnapshot: {
+            name: resumeData.fullName,
+            skills: resumeData.skills.substring(0, 100),
+            experience: resumeData.experience.substring(0, 100)
+          }
+        });
+
+        setTimeout(() => {
+          if (replyBodyRef.current) {
+            replyBodyRef.current.focus();
+          }
+        }, 100);
+      } else {
+        throw new Error('Failed to generate resume-based reply');
+      }
+    } catch (error) {
+      console.error('Error generating resume-based reply:', error);
+      alert('Failed to generate resume-based reply. Please try again.');
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  const generateResumePDF = async () => {
+    setGeneratingResume(true);
+    try {
+      // Import jsPDF dynamically
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+      
+      // Set fonts and colors
+      doc.setFontSize(20);
+      doc.setTextColor(40, 40, 40);
+      doc.text(resumeData.fullName || 'Your Name', 20, 30);
+      
+      // Contact info
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`${resumeData.email} | ${resumeData.phone} | ${resumeData.address}`, 20, 40);
+      
+      let yPosition = 60;
+      
+      // Helper function to add sections
+      const addSection = (title, content) => {
+        if (content) {
+          doc.setFontSize(14);
+          doc.setTextColor(40, 40, 40);
+          doc.text(title, 20, yPosition);
+          yPosition += 10;
+          
+          doc.setFontSize(10);
+          doc.setTextColor(60, 60, 60);
+          const lines = doc.splitTextToSize(content, 170);
+          doc.text(lines, 20, yPosition);
+          yPosition += lines.length * 5 + 10;
+        }
+      };
+      
+      addSection('EDUCATION', resumeData.education);
+      addSection('SKILLS', resumeData.skills);
+      addSection('EXPERIENCE', resumeData.experience);
+      addSection('PROJECTS', resumeData.projects);
+      addSection('CERTIFICATIONS', resumeData.certifications);
+      
+      // Save the PDF
+      doc.save(`${resumeData.fullName.replace(/\s+/g, '_')}_Resume.pdf`);
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setGeneratingResume(false);
+    }
+  };
+
+  const toggleResumeAssist = () => {
+    setShowResumeAssist(!showResumeAssist);
+  };
+
+  const saveResumeManually = useCallback(() => {
+    try {
+      const saved = saveResumeData(resumeData);
+      if (saved) {
+        alert('Resume data saved successfully!');
+      } else {
+        alert('Failed to save resume data.');
+      }
+    } catch (error) {
+      console.error('Error saving resume data manually:', error);
+      alert('Failed to save resume data.');
+    }
+  }, [resumeData]);
+
+  const handleExportData = useCallback(() => {
+    try {
+      exportResumeData();
+    } catch (error) {
+      console.error('Error exporting resume data:', error);
+      alert('Failed to export resume data.');
+    }
+  }, []);
 
   return (
     <MainContainer style={openDrawer ? { marginLeft: 20, width: 'calc(100% - 20px)' } : { width: '100%' }}>
@@ -408,6 +603,15 @@ const ViewEmails = ({ openDrawer }) => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Button
                       size="small"
+                      startIcon={<PersonAdd />}
+                      onClick={toggleResumeAssist}
+                      variant={showResumeAssist ? 'contained' : 'outlined'}
+                      color="success"
+                    >
+                      Resume Assist
+                    </Button>
+                    <Button
+                      size="small"
                       startIcon={<AutoAwesome />}
                       onClick={toggleAIAssist}
                       variant={showAIAssist ? 'contained' : 'outlined'}
@@ -421,6 +625,157 @@ const ViewEmails = ({ openDrawer }) => {
                   </Box>
                 </ReplyHeader>
                 
+                {/* Resume Assistant Section */}
+                <Collapse in={showResumeAssist}>
+                  <ResumeSection>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                      <Typography variant="subtitle2">
+                        📄 Resume-Based Reply Generator
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          size="small"
+                          onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
+                          color={autoSaveEnabled ? 'success' : 'default'}
+                          variant="outlined"
+                        >
+                          Auto-save: {autoSaveEnabled ? 'ON' : 'OFF'}
+                        </Button>
+                        <Button
+                          size="small"
+                          onClick={exportResumeData}
+                          variant="outlined"
+                        >
+                          Export Data
+                        </Button>
+                        <Button
+                          size="small"
+                          onClick={saveResumeManually}
+                          variant="outlined"
+                        >
+                          Save Now
+                        </Button>
+                      </Box>
+                    </Box>
+                    
+                    <Typography variant="body2" color="textSecondary" gutterBottom>
+                      Your resume data is automatically saved locally and used for contextual AI responses.
+                    </Typography>
+                    
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, marginTop: 2 }}>
+                      <TextField
+                        size="small"
+                        label="Full Name"
+                        value={resumeData.fullName}
+                        onChange={handleResumeChange('fullName')}
+                        required
+                      />
+                      <TextField
+                        size="small"
+                        label="Email"
+                        value={resumeData.email}
+                        onChange={handleResumeChange('email')}
+                        required
+                      />
+                      <TextField
+                        size="small"
+                        label="Phone"
+                        value={resumeData.phone}
+                        onChange={handleResumeChange('phone')}
+                      />
+                      <TextField
+                        size="small"
+                        label="Address"
+                        value={resumeData.address}
+                        onChange={handleResumeChange('address')}
+                      />
+                    </Box>
+                    
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Education"
+                      placeholder="e.g., B.Tech Computer Science, XYZ University (2021-2025)"
+                      value={resumeData.education}
+                      onChange={handleResumeChange('education')}
+                      multiline
+                      rows={2}
+                      sx={{ marginTop: 2 }}
+                    />
+                    
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Skills"
+                      placeholder="e.g., JavaScript, React, Node.js, Python, Machine Learning"
+                      value={resumeData.skills}
+                      onChange={handleResumeChange('skills')}
+                      multiline
+                      rows={2}
+                      sx={{ marginTop: 2 }}
+                    />
+                    
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Experience"
+                      placeholder="e.g., Software Development Intern at ABC Company (Summer 2023)"
+                      value={resumeData.experience}
+                      onChange={handleResumeChange('experience')}
+                      multiline
+                      rows={2}
+                      sx={{ marginTop: 2 }}
+                    />
+                    
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Projects"
+                      placeholder="e.g., E-commerce Web App using MERN Stack, AI Chatbot using Python"
+                      value={resumeData.projects}
+                      onChange={handleResumeChange('projects')}
+                      multiline
+                      rows={2}
+                      sx={{ marginTop: 2 }}
+                    />
+                    
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Certifications"
+                      placeholder="e.g., AWS Cloud Practitioner, Google Analytics Certified"
+                      value={resumeData.certifications}
+                      onChange={handleResumeChange('certifications')}
+                      multiline
+                      rows={1}
+                      sx={{ marginTop: 2 }}
+                    />
+                    
+                    <Box sx={{ marginTop: 3, display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+                      <Button
+                        size="small"
+                        startIcon={<PictureAsPdf />}
+                        onClick={generateResumePDF}
+                        disabled={generatingResume || !resumeData.fullName}
+                        variant="outlined"
+                      >
+                        {generatingResume ? 'Generating PDF...' : 'Download Resume PDF'}
+                      </Button>
+                      
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="success"
+                        startIcon={aiGenerating ? <CircularProgress size={16} /> : <AutoAwesome />}
+                        onClick={generateResumeBasedReply}
+                        disabled={aiGenerating || !resumeData.fullName || !resumeData.email}
+                      >
+                        {aiGenerating ? 'Generating...' : 'Generate Smart Reply'}
+                      </Button>
+                    </Box>
+                  </ResumeSection>
+                </Collapse>
+
                 {/* AI Assistant Section */}
                 <Collapse in={showAIAssist}>
                   <AIAssistSection>
