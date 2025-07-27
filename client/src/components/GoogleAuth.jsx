@@ -3,6 +3,7 @@ import { Box, Button, Typography, styled, CircularProgress } from '@mui/material
 import { initializeGapi, signIn, signOut, isSignedIn, startTokenRefresh } from '../api/gmailApi';
 import { validateEnvironment, getSetupInstructions } from '../utils/envCheck.js';
 import SetupGuide from './SetupGuide.jsx';
+import { Link } from 'react-router-dom';
 
 const AuthContainer = styled(Box)({
   display: 'flex',
@@ -224,6 +225,23 @@ const GoogleAuth = ({ onAuthSuccess, children }) => {
         >
           {signingIn ? 'Signing in...' : 'Sign in with Google'}
         </SignInButton>
+        
+        <Typography variant="caption" color="textSecondary" align="center" style={{ marginTop: '20px', maxWidth: '400px' }}>
+          This app requires access to your Gmail account to read, send, and manage emails.
+          Your data is processed locally and not stored on our servers.
+        </Typography>
+
+        <Box sx={{ marginTop: 2 }}>
+          <Typography 
+            variant="caption" 
+            color="primary" 
+            align="center"
+            onClick={() => window.open('/privacy', '_blank')}
+            sx={{ cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            Privacy Policy
+          </Typography>
+        </Box>
       </AuthContainer>
     );
   }

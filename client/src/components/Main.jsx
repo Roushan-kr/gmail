@@ -5,6 +5,7 @@ import Header from './Header';
 import SideBar from './SideBar';
 import Email from './Email';
 import ViewEmails from './ViewEmails';
+import PrivacyPolicy from './PrivacyPolicy';
 
 const Main = () => {
   const [openDrawer, setOpenDrawer] = useState(true);
@@ -23,8 +24,8 @@ const Main = () => {
             <Route path="/" element={<Email openDrawer={openDrawer} />} />
             <Route path="/emails/:type" element={<Email openDrawer={openDrawer} />} />
             <Route path="/view" element={<ViewEmails openDrawer={openDrawer} />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
           </Routes>
-          <Outlet context={{ openDrawer }} />
         </Box>
       </Box>
     </Box>
