@@ -77,7 +77,7 @@ const TermsOfService = () => {
             </Typography>
             
             <Typography variant="subtitle1" align="center" color="textSecondary" gutterBottom>
-              Gmail Clone Application
+              ReplyMate Application
             </Typography>
             
             <Typography variant="body2" align="center" color="textSecondary" sx={{ mb: 4 }}>
@@ -91,7 +91,7 @@ const TermsOfService = () => {
               Agreement to Terms
             </Typography>
             <Typography variant="body1" paragraph>
-              These Terms of Service ("Terms") govern your use of the Gmail Clone application ("Service") 
+              These Terms of Service ("Terms") govern your use of the ReplyMate application ("Service") 
               operated by us ("we", "our", or "us"). By accessing or using our Service, you agree to be 
               bound by these Terms.
             </Typography>
@@ -112,7 +112,7 @@ const TermsOfService = () => {
             </SectionHeader>
 
             <Typography variant="body1" paragraph>
-              Gmail Clone is an educational web application that provides:
+              ReplyMate is an educational web application that provides:
             </Typography>
 
             <List>
@@ -406,7 +406,7 @@ const TermsOfService = () => {
             <Box sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
               <Typography variant="body2">
                 <strong>Email:</strong> dev.roushncse@gmail.com<br/>
-                <strong>Project:</strong> Gmail Clone - Educational Application<br/>
+                <strong>Project:</strong> ReplyMate - Educational Application<br/>
                 <strong>Purpose:</strong> Educational and Demonstration Only<br/>
                 <strong>Privacy Policy:</strong> 
                 <Typography 

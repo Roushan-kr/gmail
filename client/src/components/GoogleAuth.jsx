@@ -248,9 +248,12 @@ const GoogleAuth = ({ onAuthSuccess, onAuthFailure, children }) => {
   if (!isAuthenticated) {
     return (
       <AuthContainer>
-        <Typography variant="h4" gutterBottom>
-          Gmail Clone
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <img src="/logo.png" alt="ReplyMate" style={{ width: '48px', height: '48px' }} />
+          <Typography variant="h4" gutterBottom>
+            ReplyMate
+          </Typography>
+        </Box>
         <Typography variant="body1" color="textSecondary" gutterBottom align="center">
           Sign in with your Google account to access your Gmail emails
         </Typography>

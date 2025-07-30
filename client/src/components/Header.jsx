@@ -67,7 +67,7 @@ const Header = ({toggleDrawer}) => {
   return (
     <StyleAppBar position="static">
         <Toolbar>
-        <MenuIcon color="action" onClick={toggleDrawer}/>
+          <MenuIcon color="action" onClick={toggleDrawer}/>
         <img src={gmailLogo} alt="logo" style={{ width: 110, marginLeft: 15 }}/>
         <SearchWrapper>
             <SearchIcon color="action"/>

@@ -77,7 +77,7 @@ const PrivacyPolicy = () => {
             </Typography>
             
             <Typography variant="subtitle1" align="center" color="textSecondary" gutterBottom>
-              Gmail Clone Application
+              ReplyMate Application
             </Typography>
             
             <Typography variant="body2" align="center" color="textSecondary" sx={{ mb: 4 }}>
@@ -91,7 +91,7 @@ const PrivacyPolicy = () => {
               Introduction
             </Typography>
             <Typography variant="body1" paragraph>
-              This Gmail Clone application ("we", "our", or "us") is committed to protecting your privacy. 
+              This ReplyMate application ("we", "our", or "us") is committed to protecting your privacy. 
               This Privacy Policy explains how we collect, use, and safeguard your information when you use 
               our email client application that integrates with Google's Gmail API.
             </Typography>
@@ -364,7 +364,7 @@ const PrivacyPolicy = () => {
             <Box sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
               <Typography variant="body2">
                 <strong>Email:</strong> dev.roushncse@gmail.com<br/>
-                <strong>Project:</strong> Gmail Clone - Educational Application<br/>
+                <strong>Project:</strong> ReplyMate - Educational Application<br/>
                 <strong>Data Controller:</strong> Local Browser Storage Only<br/>
                 <strong>Terms of Service:</strong> 
                 <Typography 
