@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Button, Typography, styled, CircularProgress } from '@mui/material';
 import { initializeGapi, signIn, signOut, isSignedIn, startTokenRefresh } from '../api/gmailApi';
 import { validateEnvironment, getSetupInstructions } from '../utils/envCheck.js';
@@ -26,13 +26,15 @@ const SignInButton = styled(Button)({
   }
 });
 
-const GoogleAuth = ({ onAuthSuccess, children }) => {
+const GoogleAuth = ({ onAuthSuccess, onAuthFailure, children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [signingIn, setSigningIn] = useState(false);
   const [showSetupGuide, setShowSetupGuide] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -157,6 +159,26 @@ const GoogleAuth = ({ onAuthSuccess, children }) => {
     }
   };
 
+  // Enhanced error handling with retry mechanism
+  const handleRetry = useCallback(async () => {
+    if (retryCount >= 3) {
+      setError('Maximum retry attempts reached. Please refresh the page.');
+      return;
+    }
+
+    setIsRetrying(true);
+    setRetryCount(prev => prev + 1);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+      window.location.reload(); // Refresh to retry initialization
+    } catch (error) {
+      setError('Retry failed. Please refresh the page manually.');
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [retryCount]);
+
   if (isLoading || checkingAuth) {
     return (
       <AuthContainer>
@@ -169,36 +191,25 @@ const GoogleAuth = ({ onAuthSuccess, children }) => {
   if (error) {
     return (
       <AuthContainer>
-        {showSetupGuide ? (
-          <SetupGuide onComplete={() => window.location.reload()} />
-        ) : (
-          <>
-            <Typography color="error" gutterBottom align="center">
-              Configuration Error
-            </Typography>
-            <Typography variant="body2" style={{ 
-              maxWidth: '500px', 
-              textAlign: 'center',
-              marginBottom: '20px'
-            }}>
-              {error}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button 
-                onClick={() => setShowSetupGuide(true)} 
-                variant="contained"
-              >
-                Show Setup Guide
-              </Button>
-              <Button 
-                onClick={() => window.location.reload()} 
-                variant="outlined"
-              >
-                Retry
-              </Button>
-            </Box>
-          </>
+        <Typography variant="h5" color="error" gutterBottom>
+          Authentication Error
+        </Typography>
+        <Typography color="error" gutterBottom align="center">
+          {error}
+        </Typography>
+        {retryCount < 3 && (
+          <Button 
+            onClick={handleRetry} 
+            disabled={isRetrying}
+            variant="outlined"
+            sx={{ mt: 2 }}
+          >
+            {isRetrying ? 'Retrying...' : `Retry (${3 - retryCount} attempts left)`}
+          </Button>
         )}
+        <Typography variant="caption" sx={{ mt: 2, maxWidth: '400px' }}>
+          If the problem persists, please check your internet connection and try refreshing the page.
+        </Typography>
       </AuthContainer>
     );
   }

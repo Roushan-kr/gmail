@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { BrowserRouter } from "react-router-dom";
 import GoogleAuth from './GoogleAuth';
+import { Analytics } from "@vercel/analytics/react"; // Fixed import
 import Main from './Main';
 
 function App() {
@@ -18,18 +19,17 @@ function App() {
   }, []);
 
   return (
-    <div className="App">
-      <GoogleAuth 
-        onAuthSuccess={handleAuthSuccess}
-        onAuthFailure={handleAuthFailure}
-      >
-        {isAuthenticated && authChecked && (
-          <BrowserRouter>
-            <Main />
-          </BrowserRouter>
-        )}
-      </GoogleAuth>
-    </div>
+    <BrowserRouter> {/* Move BrowserRouter to top level */}
+      <div className="App">
+        <GoogleAuth 
+          onAuthSuccess={handleAuthSuccess}
+          onAuthFailure={handleAuthFailure}
+        >
+          {isAuthenticated && authChecked && <Main />}
+        </GoogleAuth>
+        <Analytics />
+      </div>
+    </BrowserRouter>
   );
 }
 
