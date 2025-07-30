@@ -9,6 +9,7 @@ export default defineConfig({
     open: true,
     host: true,
     https: false, // Set to true if you need HTTPS for production testing
+    historyApiFallback: true,
   },
   preview: {
     port: 3000,
@@ -41,4 +42,5 @@ export default defineConfig({
   optimizeDeps: {
     include: ['googleapis', 'google-auth-library'],
   },
+  base: './',
 });

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import GoogleAuth from './GoogleAuth';
 import { Analytics } from "@vercel/analytics/react";
@@ -9,6 +9,7 @@ import TermsOfService from './TermsOfService';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [isProduction, setIsProduction] = useState(false);
 
   const handleAuthSuccess = useCallback(() => {
     setIsAuthenticated(true);
@@ -20,8 +21,12 @@ function App() {
     setAuthChecked(true);
   }, []);
 
+  useEffect(() => {
+    setIsProduction(window.location.hostname !== 'localhost');
+  }, []);
+
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={isProduction ? undefined : '/'}>
       <div className="App">
         <Routes>
           {/* Public routes - accessible without authentication */}
@@ -46,6 +51,15 @@ function App() {
             </GoogleAuth>
           } />
           <Route path="/view" element={
+            <GoogleAuth 
+              onAuthSuccess={handleAuthSuccess}
+              onAuthFailure={handleAuthFailure}
+            >
+              {isAuthenticated && authChecked && <Main />}
+            </GoogleAuth>
+          } />
+          {/* Catch-all route for 404s in production */}
+          <Route path="*" element={
             <GoogleAuth 
               onAuthSuccess={handleAuthSuccess}
               onAuthFailure={handleAuthFailure}
