@@ -4,6 +4,7 @@ import { initializeGapi, signIn, signOut, isSignedIn, startTokenRefresh } from '
 import { validateEnvironment, getSetupInstructions } from '../utils/envCheck.js';
 import SetupGuide from './SetupGuide.jsx';
 import { Link } from 'react-router-dom';
+import { authCookies, cookieManager } from '../utils/cookieManager.js';
 
 const AuthContainer = styled(Box)({
   display: 'flex',
@@ -39,6 +40,20 @@ const GoogleAuth = ({ onAuthSuccess, onAuthFailure, children }) => {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        // Check if cookies are enabled
+        if (!cookieManager.isEnabled()) {
+          throw new Error('Cookies are disabled. Please enable cookies to use this application.');
+        }
+
+        // Check for existing auth token in cookies
+        const existingToken = authCookies.getAuthToken();
+        if (existingToken) {
+          console.log('Found existing auth token in cookies');
+          setIsAuthenticated(true);
+          onAuthSuccess();
+          return;
+        }
+
         // Validate environment first
         const envValidation = validateEnvironment();
         
@@ -99,6 +114,11 @@ const GoogleAuth = ({ onAuthSuccess, onAuthFailure, children }) => {
         
         if (authenticated) {
           console.log('User already authenticated');
+          // Store auth token in cookie for persistence
+          const token = window.gapi?.client?.getToken();
+          if (token) {
+            authCookies.setAuthToken(token.access_token, 3600);
+          }
           onAuthSuccess();
         }
         
@@ -122,6 +142,12 @@ const GoogleAuth = ({ onAuthSuccess, onAuthFailure, children }) => {
       
       console.log('Starting sign-in process...');
       await signIn();
+      
+      // Store auth token in cookie after successful sign-in
+      const token = window.gapi?.client?.getToken();
+      if (token) {
+        authCookies.setAuthToken(token.access_token, 3600);
+      }
       
       setIsAuthenticated(true);
       onAuthSuccess();
@@ -151,8 +177,12 @@ const GoogleAuth = ({ onAuthSuccess, onAuthFailure, children }) => {
   const handleSignOut = async () => {
     try {
       signOut();
+      
+      // Clear auth cookies
+      authCookies.clearAuth();
+      cookieManager.clearAll();
+      
       setIsAuthenticated(false);
-      // Clear any app state
       window.location.reload();
     } catch (error) {
       console.error('Sign out failed:', error);
