@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+
+# Disallow authenticated routes from crawling
+Disallow: /emails/
+Disallow: /view
+
+# Sitemap location
+Sitemap: https://gmail-sable.vercel.app/
+
+# Allow crawling of static assets
+Allow: /logo.png
+Allow: /favicon.ico
+Allow: /*.css
+Allow: /*.js
