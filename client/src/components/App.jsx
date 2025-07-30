@@ -29,7 +29,23 @@ function App() {
           <Route path="/terms" element={<TermsOfService />} />
           
           {/* Protected routes - require authentication */}
-          <Route path="*" element={
+          <Route path="/" element={
+            <GoogleAuth 
+              onAuthSuccess={handleAuthSuccess}
+              onAuthFailure={handleAuthFailure}
+            >
+              {isAuthenticated && authChecked && <Main />}
+            </GoogleAuth>
+          } />
+          <Route path="/emails/:type" element={
+            <GoogleAuth 
+              onAuthSuccess={handleAuthSuccess}
+              onAuthFailure={handleAuthFailure}
+            >
+              {isAuthenticated && authChecked && <Main />}
+            </GoogleAuth>
+          } />
+          <Route path="/view" element={
             <GoogleAuth 
               onAuthSuccess={handleAuthSuccess}
               onAuthFailure={handleAuthFailure}
