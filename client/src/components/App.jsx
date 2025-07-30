@@ -1,8 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import GoogleAuth from './GoogleAuth';
-import { Analytics } from "@vercel/analytics/react"; // Fixed import
+import { Analytics } from "@vercel/analytics/react";
 import Main from './Main';
+import PrivacyPolicy from './PrivacyPolicy';
+import TermsOfService from './TermsOfService';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -19,14 +21,23 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter> {/* Move BrowserRouter to top level */}
+    <BrowserRouter>
       <div className="App">
-        <GoogleAuth 
-          onAuthSuccess={handleAuthSuccess}
-          onAuthFailure={handleAuthFailure}
-        >
-          {isAuthenticated && authChecked && <Main />}
-        </GoogleAuth>
+        <Routes>
+          {/* Public routes - accessible without authentication */}
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          
+          {/* Protected routes - require authentication */}
+          <Route path="*" element={
+            <GoogleAuth 
+              onAuthSuccess={handleAuthSuccess}
+              onAuthFailure={handleAuthFailure}
+            >
+              {isAuthenticated && authChecked && <Main />}
+            </GoogleAuth>
+          } />
+        </Routes>
         <Analytics />
       </div>
     </BrowserRouter>

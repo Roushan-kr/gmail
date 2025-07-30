@@ -3,7 +3,7 @@ import { Box, Button, Typography, styled, CircularProgress } from '@mui/material
 import { initializeGapi, signIn, signOut, isSignedIn, startTokenRefresh } from '../api/gmailApi';
 import { validateEnvironment, getSetupInstructions } from '../utils/envCheck.js';
 import SetupGuide from './SetupGuide.jsx';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { authCookies, cookieManager } from '../utils/cookieManager.js';
 
 const AuthContainer = styled(Box)({
@@ -36,6 +36,7 @@ const GoogleAuth = ({ onAuthSuccess, onAuthFailure, children }) => {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const initAuth = async () => {
@@ -277,7 +278,7 @@ const GoogleAuth = ({ onAuthSuccess, onAuthFailure, children }) => {
             variant="caption" 
             color="primary" 
             sx={{ cursor: 'pointer', textDecoration: 'underline' }}
-            onClick={() => window.open('/privacy', '_blank')}
+            onClick={() => navigate('/privacy')}
           >
             Privacy Policy
           </Typography>
@@ -285,7 +286,7 @@ const GoogleAuth = ({ onAuthSuccess, onAuthFailure, children }) => {
             variant="caption" 
             color="primary" 
             sx={{ cursor: 'pointer', textDecoration: 'underline' }}
-            onClick={() => window.open('/terms', '_blank')}
+            onClick={() => navigate('/terms')}
           >
             Terms of Service
           </Typography>
